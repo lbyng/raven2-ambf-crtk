@@ -11,6 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     python3-pip \
     python3-numpy \
+    libasound2-dev \
+    libgl1-mesa-dev \
+    xorg-dev \
+    libusb-1.0-0-dev \
+    libeigen3-dev \
     libglu1-mesa-dev \
     freeglut3-dev \
     libglew-dev \
@@ -28,22 +33,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-rospy \
     ros-noetic-sensor-msgs \
     ros-noetic-geometry-msgs \
+    ros-noetic-roscpp \
+    ros-noetic-std-msgs \
+    ros-noetic-message-generation \
+    ros-noetic-message-runtime \
     ros-noetic-catkin \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir transformations
 
 WORKDIR /ws
 RUN mkdir -p /ws/catkin_ws/src
 
 COPY . /ws/catkin_ws/src/raven2-ambf-crtk
 
-RUN git clone https://github.com/WPI-AIM/ambf.git /opt/ambf \
+RUN git clone -b ambf-2.0 https://github.com/WPI-AIM/ambf.git /opt/ambf \
     && git clone https://github.com/uw-biorobotics/raven2.git /ws/catkin_ws/src/raven2
 
-RUN cd /opt/ambf \
+RUN ln -s /opt/ambf/ambf_ros_modules /ws/catkin_ws/src/ambf_ros_modules
+
+RUN /bin/bash -c "source /opt/ros/noetic/setup.bash \
+    && cd /opt/ambf \
     && mkdir -p build \
     && cd build \
     && cmake .. \
-    && make -j"$(nproc)"
+    && make -j\"$(nproc)\""
 
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 
@@ -52,6 +66,9 @@ RUN cp -r /ws/catkin_ws/src/raven2-ambf-crtk/raven_models/* \
 
 ENV AMBF_ROOT=/opt/ambf
 ENV PYTHONPATH=/opt/ambf/ambf_ros_modules/ambf_client/python:$PYTHONPATH
+
+RUN echo "source /opt/ros/noetic/setup.bash" >> /etc/bash.bashrc \
+    && echo "source /ws/catkin_ws/devel/setup.bash" >> /etc/bash.bashrc
 
 COPY docker/entrypoint.sh /ws/entrypoint.sh
 RUN chmod +x /ws/entrypoint.sh

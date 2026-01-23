@@ -2,6 +2,7 @@
 set -e
 
 source /opt/ros/noetic/setup.bash
+source /opt/ambf/build/devel/setup.bash
 source /ws/catkin_ws/devel/setup.bash
 
 export AMBF_ROOT=/opt/ambf

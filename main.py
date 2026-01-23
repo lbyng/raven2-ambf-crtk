@@ -16,7 +16,16 @@ class main:
         self.ambf_client = Client()
         self.ambf_client.connect()
         time.sleep(1)
-        self.arm = self.ambf_client.get_obj_handle('base_link_L')
+        self.arm = None
+        for _ in range(50):
+            self.arm = self.ambf_client.get_obj_handle('base_link_L')
+            if self.arm is not None:
+                break
+            rospy.logwarn("Waiting for AMBF object: base_link_L")
+            time.sleep(0.1)
+        if self.arm is None:
+            rospy.logerr("AMBF object not found: base_link_L")
+            return None
 
         self.robot_state = robot_state.robot_state()
         self.crtk_api = crtk_api.crtk_api(self.robot_state)

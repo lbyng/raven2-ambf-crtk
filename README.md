@@ -1,130 +1,89 @@
-# **RAVEN-II AMBF CRTK Framework**  
+# RAVEN-II AMBF CRTK Framework
 
-A framework for integrating the **AMBF** (Asynchronous Multi-Body Framework) **RAVEN-II** surgical robot with **CRTK API** support to simulate real RAVEN-II behavior with **1000Hz control execution** and publishing the **RAVEN State** topic.
+Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK API**, with **1000 Hz** control and a real-RAVEN-style `raven_state` topic.
 
-> ⚠ **Note:** Currently, this framework only supports the **left arm** of RAVEN-II (**GOLD arm**).
+> ⚠ Only the **left arm** (GOLD arm) is supported.
 
-## **Flowchart**  
+![Flow Chart](./fig/flow-chart.png)
 
-![Flow Chart](./fig/flow-chart.png)  
+| Topic | Type | Direction |
+|---|---|---|
+| `/arm1/measured_js` | `sensor_msgs/JointState` | published |
+| `/arm1/measured_cp` | `geometry_msgs/TransformStamped` | published |
+| `/arm1/servo_jr` | `sensor_msgs/JointState` (joint deltas in `position`) | subscribed |
+| `/arm1/servo_cr` | `geometry_msgs/TransformStamped` (relative pose) | subscribed |
+| `/ambf/raven_state` | `raven_2/raven_state` | published |
 
+## Native setup (Ubuntu 20.04 + ROS Noetic)
 
-## **1. Installation & Setup**  
-
-### **Step 1: Setup RAVEN-II Package**
-
-Ensure that you have the **[RAVEN-II Package](https://github.com/uw-biorobotics/raven2)** installed and running on your system.
-
-### **Step 2: Setup AMBF Simulator**  
-
-Ensure that you have the **[AMBF simulator](https://github.com/WPI-AIM/ambf)** installed and running on your system.
-
-### **Step 3: Clone the RAVEN-II AMBF CRTK Framework**  
-
-Open a terminal and run the following command:  
+**1. AMBF 2.0** — build dependencies are listed in the `apt-get install` step of the [Dockerfile](./Dockerfile).
 
 ```bash
-cd ~
-git clone https://github.com/lbyng/raven2-ambf-crtk.git
+source /opt/ros/noetic/setup.bash
+git clone -b ambf-2.0 https://github.com/WPI-AIM/ambf.git ~/ambf
+mkdir -p ~/ambf/build && cd ~/ambf/build
+cmake .. && make -j$(nproc)
 ```
 
-### **Step 4: Replace the RAVEN-II Model in AMBF**
-
-To ensure the base-link of RAVEN-II is parallel to the ground, replace the RAVEN-II model in the AMBF with the model provided in this repository. For example, if your AMBF model path is:
+**2. Catkin workspace** with the [RAVEN-II package](https://github.com/uw-biorobotics/raven2) (for `raven_2` messages) and AMBF's ROS modules:
 
 ```bash
-~/ambf/ambf_models/meshes/blender_afmb/raven_2
+mkdir -p ~/ros_ambf_ws/src && cd ~/ros_ambf_ws/src
+git clone https://github.com/uw-biorobotics/raven2.git
+ln -s ~/ambf/ambf_ros_modules ambf_ros_modules
+cd ~/ros_ambf_ws && catkin_make
+echo "source ~/ros_ambf_ws/devel/setup.bash" >> ~/.bashrc
 ```
 
-Then copy the model files from the repository into that folder:
+**3. This repository**, with its Python environment managed by [uv](https://docs.astral.sh/uv/):
 
 ```bash
-cp -r ~/raven2-ambf-crtk/raven_models/* ~/ambf/ambf_models/meshes/blender_afmb/raven_2/
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/lbyng/raven2-ambf-crtk.git ~/raven2-ambf-crtk
+cd ~/raven2-ambf-crtk && uv sync
 ```
 
-### **Step 5: Run AMBF RAVEN-II**
+`uv sync` builds `.venv` on the system Python 3.8 that ROS Noetic uses. ROS packages (`rospy`, `tf`, `ambf_client`, ...) are not installed into it; they come from your sourced ROS workspace.
 
-Launch the AMBF simulator with the updated RAVEN-II model by executing:
+**4. (Optional) alias** for launching AMBF with this repo's RAVEN-II model (base-link parallel to the ground):
 
 ```bash
-~/ambf/bin/lin-x86_64/ambf_simulator -a "/home/sean/ambf/ambf_models/meshes/blender_afmb/raven_2/raven_straight.yaml"
+echo "alias ambf-raven2='~/ambf/bin/lin-x86_64/ambf_simulator -a ~/raven2-ambf-crtk/raven_models/raven_straight.yaml'" >> ~/.bashrc
 ```
 
-If everything is set up correctly, you should see the **AMBF RAVEN-II** running.
+## Run
 
-### **Step 6: Add an Alias for Convenience (Optional)**
-
-To simplify launching the simulator, add an alias in your `.bashrc` file:
+Each in its own terminal:
 
 ```bash
-# Open ~/.bashrc in a text editor
-nano ~/.bashrc  
-
-# Add the following alias at the end of the file:
-alias ambf-raven2="~/ambf/bin/lin-x86_64/ambf_simulator -a '/home/sean/ambf/ambf_models/meshes/blender_afmb/raven_2/raven_straight.yaml'"
-
-# Save and exit (Ctrl + X, then Y, then Enter)
-```
-
-Reload the `.bashrc` file to apply changes:
-
-```bash
-source ~/.bashrc
-```
-
-Now, you can start **AMBF RAVEN-II** anytime by simply typing:
-
-```bash
+roscore
 ambf-raven2
+cd ~/raven2-ambf-crtk && uv run main.py                 # once AMBF has loaded the model
+cd ~/raven2-ambf-crtk && uv run keyboard_controller.py  # optional
 ```
 
-### **Step 7: Run the RAVEN-II AMBF CRTK Framework**
+The keyboard controller takes one key at a time; per-joint velocities are set at the top of `keyboard_controller.py`.
 
-Once AMBF is running, start the **RAVEN-II framework** by executing:
+## Docker
+
+Builds AMBF 2.0, the workspace and this repository, then runs `roscore`, the AMBF GUI and `main.py` in one container.
+
+Host requirements: [Docker Engine with Compose v2](https://docs.docker.com/engine/install/ubuntu/), the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), and an X server.
 
 ```bash
-python3 ~/raven2-ambf-crtk/main.py
+cd ~/raven2-ambf-crtk
+xhost +local:root
+docker compose up --build
 ```
 
-At this point, the **AMBF RAVEN-II** should be running as if it were a real **RAVEN-II** robot.
-
-## **2. Keyboard Controller**
-
-You can control the **RAVEN-II arm** using a keyboard. Follow these steps:
-
-### **Start AMBF RAVEN-II and the Framework**
-
-First, ensure that AMBF is running:
+Keyboard controller, from a second terminal in the repo:
 
 ```bash
-ambf-raven2
+docker compose exec raven2-ambf bash -ic "cd /ws/catkin_ws/src/raven2-ambf-crtk && uv run --frozen keyboard_controller.py"
 ```
 
-Then, launch the **RAVEN-II AMBF CRTK Framework**:
+AMBF logs to `/tmp/ambf.log` inside the container. The container uses host networking, so the topics are also visible from the host.
 
-```bash
-python3 ~/raven2-ambf-crtk/main.py
-```
+## Contact
 
-### **Run the Keyboard Controller**
-
-Now, start the keyboard control interface:
-
-```bash
-python3 ~/raven2-ambf-crtk/keyboard_controller.py
-```
-
-### **Notes:**
-
-- The current version **only allows one key input at a time** for stability.
-- To modify velocity settings, edit the file:
-
-    ```bash
-    ~/raven2-ambf-crtk/keyboard_controller.py
-    ```
-
-    At the beginning of this script, you can adjust the **velocity variables** for each joint.
-
-### **📢 Contact**
-
-For any questions or discussions, reach out via **GitHub Issues** or email the maintainers.
+Questions and discussions are welcome via GitHub Issues or by email to the maintainers.

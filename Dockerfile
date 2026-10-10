@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     python3-dev \
-    python3-pip \
     python3-numpy \
     libasound2-dev \
     libgl1-mesa-dev \
@@ -40,7 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-catkin \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir transformations
+COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /uvx /usr/local/bin/
 
 WORKDIR /ws
 RUN mkdir -p /ws/catkin_ws/src
@@ -61,8 +60,7 @@ RUN /bin/bash -c "source /opt/ros/noetic/setup.bash \
 
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 
-RUN cp -r /ws/catkin_ws/src/raven2-ambf-crtk/raven_models/* \
-    /opt/ambf/ambf_models/meshes/blender_afmb/raven_2/
+RUN cd /ws/catkin_ws/src/raven2-ambf-crtk && uv sync --frozen
 
 ENV AMBF_ROOT=/opt/ambf
 ENV PYTHONPATH=/opt/ambf/ambf_ros_modules/ambf_client/python:$PYTHONPATH

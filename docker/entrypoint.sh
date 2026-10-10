@@ -15,9 +15,10 @@ roscore > "${ROSCORE_LOG}" 2>&1 &
 sleep 2
 
 /opt/ambf/bin/lin-x86_64/ambf_simulator -a \
-  "/opt/ambf/ambf_models/meshes/blender_afmb/raven_2/raven_straight.yaml" \
+  "/ws/catkin_ws/src/raven2-ambf-crtk/raven_models/raven_straight.yaml" \
   > "${AMBf_LOG}" 2>&1 &
 
 sleep 2
 
-exec python3 /ws/catkin_ws/src/raven2-ambf-crtk/main.py
+cd /ws/catkin_ws/src/raven2-ambf-crtk
+exec uv run --frozen main.py

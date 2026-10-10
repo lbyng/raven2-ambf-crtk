@@ -1,7 +1,7 @@
 import rospy
 import numpy as np
 import math as m
-import transformations as tf
+import tf.transformations as tft
 import raven_2.msg
 
 from utils import ambf_motor_def as amd
@@ -79,7 +79,7 @@ class ambf_raven_state:
         return None
 
     def __end_effector_orientation_desired(self):
-        q2r = tf.quaternion_matrix([self.add_ori[0], self.add_ori[1], self.add_ori[2], self.add_ori[3]])
+        q2r = tft.quaternion_matrix([self.add_ori[0], self.add_ori[1], self.add_ori[2], self.add_ori[3]])
         ori_mat = np.array(self.ori).reshape(3, 3)
         ori_d_mat = np.matmul(ori_mat, q2r[:3, :3])
         self.ori_d = list(ori_d_mat.flat)

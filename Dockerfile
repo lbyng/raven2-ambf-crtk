@@ -58,8 +58,10 @@ RUN /bin/bash -c "source /opt/ros/noetic/setup.bash \
 
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 
-# Copied after the AMBF/catkin builds so code changes reuse their cached layers.
+# Copied after the AMBF/catkin builds so code changes reuse their cached layers. The adapter is the
+# catkin package in adapter/, so the workspace is built again (only it compiles).
 COPY . /ws/catkin_ws/src/raven2-ambf-crtk
+RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 RUN cd /ws/catkin_ws/src/raven2-ambf-crtk && uv sync --frozen
 
 ENV AMBF_ROOT=/opt/ambf

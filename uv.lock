@@ -105,7 +105,6 @@ dependencies = [
     { name = "numpy" },
     { name = "pyyaml" },
     { name = "rospkg" },
-    { name = "transformations" },
 ]
 
 [package.metadata]
@@ -113,7 +112,6 @@ requires-dist = [
     { name = "numpy" },
     { name = "pyyaml" },
     { name = "rospkg" },
-    { name = "transformations", specifier = ">=2022.9.26" },
 ]
 
 [[package]]
@@ -137,18 +135,4 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
-]
-
-[[package]]
-name = "transformations"
-version = "2022.9.26"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/40/4dae1dbb87b2b0e00547a7c4ee19f46a59b67866e69d295ca2b2b98a39b6/transformations-2022.9.26.tar.gz", hash = "sha256:9141233392e768eb224b73059b60f19df748bb69493dfd16db7cac9f6e93a4ba", size = 45877, upload-time = "2022-09-27T04:26:06.256Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/6f/60595e77646640b787107c525b37916e8034e5d73f6516127f27afa0dfac/transformations-2022.9.26-cp38-cp38-win32.whl", hash = "sha256:858f0bddfa4f197b81c3cd04b730513ddf05e12dd383492e3236e3321bced3cf", size = 53463, upload-time = "2022-09-27T04:25:59.156Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/6a/f826f8dd2dee41f6b85f2e2ee3705be4a5e4a28ca71ea7011773f55c7cfb/transformations-2022.9.26-cp38-cp38-win_amd64.whl", hash = "sha256:0b1123cd7856767ac7f58e90c5ac11f122713c0e3f2ae945a6a7d7766594b3f6", size = 58611, upload-time = "2022-09-27T04:26:00.963Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/92/455d5a7f55dcb975a2c9dc82111fd4b7254e304f1f6ef9a692f2e419f224/transformations-2022.9.26-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:adefd73a077e36553d5e88107abf7afea23b82f4fdb8942054a35a8b6d1f073c", size = 58582, upload-time = "2022-09-27T04:26:05.131Z" },
 ]

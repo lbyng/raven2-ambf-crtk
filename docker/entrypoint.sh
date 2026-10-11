@@ -20,5 +20,4 @@ sleep 2
 
 sleep 2
 
-cd /ws/catkin_ws/src/raven2-ambf-crtk
-exec uv run --frozen raven2-ambf-crtk
+exec rosrun raven2_ambf_crtk_adapter adapter

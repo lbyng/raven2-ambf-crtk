@@ -1,6 +1,6 @@
 # RAVEN-II AMBF CRTK Framework
 
-Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK API**, with a real-RAVEN-style `raven_state` topic. The adapter loop and its topics run at **500 Hz**; AMBF runs the joint controllers at 1 kHz.
+Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK API**, with a real-RAVEN-style `raven_state` topic. The adapter is a C++ ROS node that runs at **1 kHz**, the rate of the AMBF joint controllers.
 
 > ⚠ Only the **left arm** (GOLD arm) is supported.
 
@@ -25,17 +25,7 @@ mkdir -p ~/ambf/build && cd ~/ambf/build
 cmake .. && make -j$(nproc)
 ```
 
-**2. Catkin workspace** with the [RAVEN-II package](https://github.com/uw-biorobotics/raven2) (for `raven_2` messages) and AMBF's ROS modules:
-
-```bash
-mkdir -p ~/ros_ambf_ws/src && cd ~/ros_ambf_ws/src
-git clone https://github.com/uw-biorobotics/raven2.git
-ln -s ~/ambf/ambf_ros_modules ambf_ros_modules
-cd ~/ros_ambf_ws && catkin_make
-echo "source ~/ros_ambf_ws/devel/setup.bash" >> ~/.bashrc
-```
-
-**3. This repository**, with its Python environment managed by [uv](https://docs.astral.sh/uv/):
+**2. This repository.** The adapter is the C++ ROS package in `adapter/`; the keyboard client is Python, with its environment managed by [uv](https://docs.astral.sh/uv/):
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -43,7 +33,18 @@ git clone https://github.com/lbyng/raven2-ambf-crtk.git ~/raven2-ambf-crtk
 cd ~/raven2-ambf-crtk && uv sync
 ```
 
-`uv sync` builds `.venv` on the system Python 3.8 that ROS Noetic uses. ROS packages (`rospy`, `tf`, `ambf_client`, ...) are not installed into it; they come from your sourced ROS workspace.
+`uv sync` builds `.venv` on the system Python 3.8 that ROS Noetic uses. ROS packages (`rospy`, `tf`, ...) are not installed into it; they come from your sourced ROS workspace.
+
+**3. Catkin workspace** with the [RAVEN-II package](https://github.com/uw-biorobotics/raven2) (for `raven_2` messages), AMBF's ROS modules and the adapter:
+
+```bash
+mkdir -p ~/ros_ambf_ws/src && cd ~/ros_ambf_ws/src
+git clone https://github.com/uw-biorobotics/raven2.git
+ln -s ~/ambf/ambf_ros_modules ambf_ros_modules
+ln -s ~/raven2-ambf-crtk/adapter raven2_ambf_crtk_adapter
+cd ~/ros_ambf_ws && catkin_make
+echo "source ~/ros_ambf_ws/devel/setup.bash" >> ~/.bashrc
+```
 
 **4. (Optional) alias** for launching AMBF with this repo's RAVEN-II model (base-link parallel to the ground):
 
@@ -58,8 +59,8 @@ Each in its own terminal:
 ```bash
 roscore
 ambf-raven2
-cd ~/raven2-ambf-crtk && uv run raven2-ambf-crtk   # the CRTK adapter
-cd ~/raven2-ambf-crtk && uv run raven-keyboard     # optional keyboard teleop
+rosrun raven2_ambf_crtk_adapter adapter          # the CRTK adapter (1 kHz; e.g. _rate:=500 to change)
+cd ~/raven2-ambf-crtk && uv run raven-keyboard   # optional keyboard teleop
 ```
 
 The keyboard controller takes one key at a time; per-joint velocities are set at the top of `raven2_ambf_crtk/keyboard/keyboard_controller.py`.
@@ -87,10 +88,11 @@ AMBF logs to `/tmp/ambf.log` inside the container. The container uses host netwo
 ## Project layout
 
 ```
+adapter/          CRTK <-> AMBF adapter, a C++ ROS (catkin) package
+├── include/      RAVEN-II definitions (joint limits, DH, motors) and the kinematics API
+└── src/          kinematics.cpp (forward/inverse kinematics), adapter.cpp (node: CRTK topics, servo handling, raven_state, homing)
 raven2_ambf_crtk/
-├── adapter/      CRTK <-> AMBF adapter: main loop, CRTK topics, servo handling, raven_state, homing
-├── kinematics/   RAVEN-II definitions (joint limits, DH, motors) and forward/inverse kinematics
-└── keyboard/     keyboard teleop client
+└── keyboard/     keyboard teleop client (Python)
 raven_models/     AMBF description of the RAVEN-II (straight base) and its meshes
 docker/           container entrypoint (Dockerfile and docker-compose.yml are at the root)
 ```

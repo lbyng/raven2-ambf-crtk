@@ -2,14 +2,14 @@ import rospy
 import sys
 import time
 
-import crtk_api 
-import robot_state
-import update_device_state
-import ambf_raven_state
-import raven_toolkits
+from . import crtk_api
+from . import robot_state
+from . import update_device_state
+from . import ambf_raven_state
+from . import raven_toolkits
 
 from ambf_client import Client
-from utils import ambf_raven_def as ard
+from ..kinematics import ambf_raven_def as ard
 
 # Rate of this loop and of the commands the AMBF client sends to the simulator. The motion logic uses the
 # real elapsed time, so this only sets how often the setpoint and the measured/raven_state topics update.
@@ -93,7 +93,11 @@ class main:
         return None
         
 
-if __name__ == "__main__":
+def start():
     controller = main()
     controller.home()
     controller.run()
+
+
+if __name__ == "__main__":
+    start()

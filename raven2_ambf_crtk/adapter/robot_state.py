@@ -3,8 +3,8 @@ import collections
 import rospy
 import numpy as np
 
-from utils import raven_fk as fk
-from utils import ambf_raven_def as ard
+from ..kinematics import raven_fk as fk
+from ..kinematics import ambf_raven_def as ard
 
 class robot_state:
     def __init__(self):

@@ -16,7 +16,17 @@ dependencies = [
     "transformations>=2022.9.26",
 ]
 
+[project.scripts]
+raven2-ambf-crtk = "raven2_ambf_crtk.adapter.main:start"
+raven-keyboard = "raven2_ambf_crtk.keyboard.keyboard_controller:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
 [tool.uv]
-package = false
 # Use the system Python 3.8 that ROS Noetic is built against.
 python-preference = "only-system"

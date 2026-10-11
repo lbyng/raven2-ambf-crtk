@@ -58,15 +58,15 @@ Each in its own terminal:
 ```bash
 roscore
 ambf-raven2
-cd ~/raven2-ambf-crtk && uv run main.py                 # once AMBF has loaded the model
-cd ~/raven2-ambf-crtk && uv run keyboard_controller.py  # optional
+cd ~/raven2-ambf-crtk && uv run raven2-ambf-crtk   # the CRTK adapter
+cd ~/raven2-ambf-crtk && uv run raven-keyboard     # optional keyboard teleop
 ```
 
-The keyboard controller takes one key at a time; per-joint velocities are set at the top of `keyboard_controller.py`.
+The keyboard controller takes one key at a time; per-joint velocities are set at the top of `raven2_ambf_crtk/keyboard/keyboard_controller.py`.
 
 ## Docker
 
-Builds AMBF 2.0, the workspace and this repository, then runs `roscore`, the AMBF GUI and `main.py` in one container.
+Builds AMBF 2.0, the workspace and this repository, then runs `roscore`, the AMBF GUI and the adapter in one container.
 
 Host requirements: [Docker Engine with Compose v2](https://docs.docker.com/engine/install/ubuntu/), the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), and an X server.
 
@@ -79,10 +79,21 @@ docker compose up --build
 Keyboard controller, from a second terminal in the repo:
 
 ```bash
-docker compose exec raven2-ambf bash -ic "cd /ws/catkin_ws/src/raven2-ambf-crtk && uv run --frozen keyboard_controller.py"
+docker compose exec raven2-ambf bash -ic "cd /ws/catkin_ws/src/raven2-ambf-crtk && uv run --frozen raven-keyboard"
 ```
 
 AMBF logs to `/tmp/ambf.log` inside the container. The container uses host networking, so the topics are also visible from the host.
+
+## Project layout
+
+```
+raven2_ambf_crtk/
+├── adapter/      CRTK <-> AMBF adapter: main loop, CRTK topics, servo handling, raven_state, homing
+├── kinematics/   RAVEN-II definitions (joint limits, DH, motors) and forward/inverse kinematics
+└── keyboard/     keyboard teleop client
+raven_models/     AMBF description of the RAVEN-II (straight base) and its meshes
+docker/           container entrypoint (Dockerfile and docker-compose.yml are at the root)
+```
 
 ## Contact
 

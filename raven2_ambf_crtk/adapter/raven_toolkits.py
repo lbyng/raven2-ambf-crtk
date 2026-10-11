@@ -1,7 +1,7 @@
 import rospy
 import numpy as np
 
-from utils import ambf_raven_def as ard
+from ..kinematics import ambf_raven_def as ard
 
 class raven_toolkits:
     def __init__(self, arm):

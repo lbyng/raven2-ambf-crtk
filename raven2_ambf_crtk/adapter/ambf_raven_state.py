@@ -5,7 +5,7 @@ import math as m
 import tf.transformations as tft
 import raven_2.msg
 
-from utils import ambf_motor_def as amd
+from ..kinematics import ambf_motor_def as amd
 
 class ambf_raven_state:
     

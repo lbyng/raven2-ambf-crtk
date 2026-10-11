@@ -1,7 +1,7 @@
-from utils.raven_fk import fwd_kinematics, fwd_trans, joint_to_dhvalue
+from .raven_fk import fwd_kinematics, fwd_trans, joint_to_dhvalue
 import math as m
 import numpy as np
-import utils.utilities as u
+from . import utilities as u
 
 
 # alpha, theta, a, d --> 3 out of 4 are constant, for R --> theta, for P --> ?

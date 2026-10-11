@@ -21,4 +21,4 @@ sleep 2
 sleep 2
 
 cd /ws/catkin_ws/src/raven2-ambf-crtk
-exec uv run --frozen main.py
+exec uv run --frozen raven2-ambf-crtk

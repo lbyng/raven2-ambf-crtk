@@ -2,9 +2,9 @@ import rospy
 import time
 import numpy as np
 import tf.transformations as tft
-from utils import raven_fk as fk
-from utils import raven_ik as ik
-from utils import ambf_raven_def as ard
+from ..kinematics import raven_fk as fk
+from ..kinematics import raven_ik as ik
+from ..kinematics import ambf_raven_def as ard
 
 class update_device_state:
     def __init__(self, robot_state, arm):

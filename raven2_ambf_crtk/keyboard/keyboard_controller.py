@@ -1,8 +1,8 @@
 import tty, sys, termios
-import ambf_raven_controller
+from . import ambf_raven_controller
 import rospy
 import numpy as np
-import utils.utils_keyboard_controller as utils
+from . import utils_keyboard_controller as utils
 import tf.transformations as tft
 
 velocity_joint_1 = 3 # degree/s

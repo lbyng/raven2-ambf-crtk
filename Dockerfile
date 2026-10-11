@@ -44,8 +44,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /uvx /usr/local/bin/
 WORKDIR /ws
 RUN mkdir -p /ws/catkin_ws/src
 
-COPY . /ws/catkin_ws/src/raven2-ambf-crtk
-
 RUN git clone -b ambf-2.0 https://github.com/WPI-AIM/ambf.git /opt/ambf \
     && git clone https://github.com/uw-biorobotics/raven2.git /ws/catkin_ws/src/raven2
 
@@ -60,6 +58,8 @@ RUN /bin/bash -c "source /opt/ros/noetic/setup.bash \
 
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 
+# Copied after the AMBF/catkin builds so code changes reuse their cached layers.
+COPY . /ws/catkin_ws/src/raven2-ambf-crtk
 RUN cd /ws/catkin_ws/src/raven2-ambf-crtk && uv sync --frozen
 
 ENV AMBF_ROOT=/opt/ambf

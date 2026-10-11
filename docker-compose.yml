@@ -1,6 +1,8 @@
 services:
   raven2-ambf:
-    build: .
+    build:
+      context: .
+      network: host   # cloning AMBF over the default bridge network is unreliable on WSL2
     network_mode: host
     environment:
       - DISPLAY=${DISPLAY}

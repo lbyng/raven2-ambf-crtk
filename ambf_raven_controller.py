@@ -13,8 +13,8 @@ class ambf_raven_controller:
         return None
     
     def __init_pub_sub(self):
-        self.__publisher_servo_jr = rospy.Publisher('/arm1/servo_jr', sensor_msgs.msg.JointState, latch = True, queue_size = 1)
-        self.__publisher_servo_cr = rospy.Publisher('/arm1/servo_cr', geometry_msgs.msg.TransformStamped, latch = True, queue_size = 1)
+        self.__publisher_servo_jr = rospy.Publisher('/arm1/servo_jr', sensor_msgs.msg.JointState, queue_size = 1)
+        self.__publisher_servo_cr = rospy.Publisher('/arm1/servo_cr', geometry_msgs.msg.TransformStamped, queue_size = 1)
         return None
         
     def pub_servo_jr_command(self, joint_command):

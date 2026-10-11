@@ -158,7 +158,7 @@ while True:
         utils.print_no_newline(' Moving: Grasper right    ')
         pos = np.zeros((3))
         rot = np.zeros((4))
-        pos[0] = -0.01
+        pos[1] = -0.01
         controller.pub_servo_cr_command(pos, rot)
     
     elif input_key == 'f':

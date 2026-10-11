@@ -75,14 +75,17 @@ private:
   std::deque<Command> commands_;
   int js_limit_count_ = 0;
 
-  double delta_pos_[3] = {0, 0, 0};       // last servo_cr, for raven_state pos_d / ori_d
-  double delta_ori_[4] = {0, 0, 0, 0};
+  // raven_state status, as the real RAVEN reports it: initialising while homing, then pedal down
+  // (the simulation has no pedal, so it always takes commands once homed)
+  int runlevel_ = RL_INIT;
+  int sublevel_ = SL_AUTO_INIT;
+  int last_seq_ = 0;  // number of servo commands received
 
   ambf_msgs::RigidBodyCmd command_;
   uint32_t raven_state_seq_ = 0;
   double old_mpos_[8] = {0};
-  std::chrono::steady_clock::time_point last_mpos_time_;
-  bool have_mpos_time_ = false;
+  std::chrono::steady_clock::time_point last_publish_;
+  bool published_ = false;
 };
 
 bool Adapter::connect()
@@ -152,18 +155,30 @@ void Adapter::home()
   const Joints start = joint_positions_;
   const int n = std::max(1, static_cast<int>(2.0 * rate_));
   ros::Rate rate(rate_);
-  Joints q;
+  runlevel_ = RL_INIT;
+  sublevel_ = SL_AUTO_INIT;
+  setpoint_ = start;
   for (int k = 1; k <= n && ros::ok(); k++)
   {
+    ros::spinOnce();
+    publishMeasured();
+    publishRavenState();
+    if (!commands_.empty())
+    {
+      ROS_WARN_THROTTLE(1, "Homing (runlevel INIT): servo commands are ignored.");
+      last_seq_ += static_cast<int>(commands_.size());
+      commands_.clear();
+    }
     double s = static_cast<double>(k) / n;
     s = 10 * std::pow(s, 3) - 15 * std::pow(s, 4) + 6 * std::pow(s, 5);
     for (int i = 0; i < 7; i++)
-      q[i] = start[i] + s * (HOME[i] - start[i]);
-    sendCommand(q);
-    ros::spinOnce();
+      setpoint_[i] = start[i] + s * (HOME[i] - start[i]);
+    sendCommand(setpoint_);
     rate.sleep();
   }
   setpoint_ = goal_ = HOME;
+  // the real RAVEN leaves the sublevel at SL_AUTO_INIT after initialising (only an E-stop resets it)
+  runlevel_ = RL_PEDAL_DN;
   std::cout << "Set Home" << std::endl;
 }
 
@@ -181,16 +196,11 @@ void Adapter::run()
     {
       const Command c = commands_.front();
       commands_.pop_front();
+      last_seq_++;
       if (c.cartesian)
-      {
-        std::copy(c.pos, c.pos + 3, delta_pos_);
-        std::copy(c.ori, c.ori + 4, delta_ori_);
         servoCr(c.pos, c.ori);
-      }
       else
-      {
         servoJr(c.delta);
-      }
     }
     stepTowardGoal();
     sendCommand(setpoint_);
@@ -373,14 +383,14 @@ void Adapter::publishMeasured()
 void Adapter::publishRavenState()
 {
   // raven_state layout: 0-2 shoulder/elbow/insertion, 3 unused, 4-7 tool roll/wrist/graspers;
-  // angles in degrees (the insertion too, as the real RAVEN does)
+  // angles in degrees and velocities in degrees/s (the insertion too, as the real RAVEN does)
   double jpos[8] = {0}, jpos_d[8] = {0}, jvel[8] = {0}, mpos[8] = {0}, mpos_d[8] = {0};
   for (int i = 0; i < 7; i++)
   {
     const int k = i < 3 ? i : i + 1;
     jpos[k] = joint_positions_[i] * 180.0 / PI;
     jpos_d[k] = setpoint_[i] * 180.0 / PI;
-    jvel[k] = joint_velocities_[i];
+    jvel[k] = joint_velocities_[i] * 180.0 / PI;
   }
   for (int k = 0; k < 8; k++)
   {
@@ -388,27 +398,31 @@ void Adapter::publishRavenState()
     mpos_d[k] = jpos_d[k] * MOTOR_TR[k];
   }
 
-  // motor velocity over the real time between publishes
+  // time since the last publish (0 for the first one, like the real RAVEN)
   const auto now = std::chrono::steady_clock::now();
-  const double dt = have_mpos_time_ ? std::max(std::chrono::duration<double>(now - last_mpos_time_).count(), 1e-6) : 0.001;
-  last_mpos_time_ = now;
-  have_mpos_time_ = true;
+  const double dt = published_ ? std::chrono::duration<double>(now - last_publish_).count() : 0.0;
+  last_publish_ = now;
 
   raven_2::raven_state msg;
   msg.hdr.seq = raven_state_seq_++;
   msg.hdr.stamp = ros::Time::now();
   msg.hdr.frame_id = "base_link";
+  msg.runlevel = runlevel_;
+  msg.sublevel = sublevel_;
+  msg.last_seq = last_seq_;
+  msg.type[0] = GOLD_ARM_SERIAL;
+  msg.dt = ros::Duration(dt);
 
-  const Eigen::Matrix4d q2r = quaternionMatrix(delta_ori_);
-  const Eigen::Matrix3d ori_d = cartesian_pose_.block<3, 3>(0, 0) * q2r.block<3, 3>(0, 0);
+  // pos / ori: the measured tool pose; pos_d / ori_d: the desired one, i.e. the pose of jpos_d
+  const Eigen::Matrix4d desired_pose = forwardKinematics(setpoint_);
   for (int i = 0; i < 3; i++)
   {
     msg.pos[i] = static_cast<int>(cartesian_pose_(i, 3) * 1e6);
-    msg.pos_d[i] = msg.pos[i] + static_cast<int>(delta_pos_[i] * 1e6);
+    msg.pos_d[i] = static_cast<int>(desired_pose(i, 3) * 1e6);
     for (int j = 0; j < 3; j++)
     {
       msg.ori[3 * i + j] = cartesian_pose_(i, j);
-      msg.ori_d[3 * i + j] = ori_d(i, j);
+      msg.ori_d[3 * i + j] = desired_pose(i, j);
     }
   }
   for (int k = 0; k < 8; k++)
@@ -418,9 +432,10 @@ void Adapter::publishRavenState()
     msg.jvel[k] = jvel[k];
     msg.mpos[k] = mpos[k];
     msg.mpos_d[k] = mpos_d[k];
-    msg.mvel[k] = (mpos[k] - old_mpos_[k]) / dt;
+    msg.mvel[k] = published_ && dt > 0 ? (mpos[k] - old_mpos_[k]) / dt : 0.0;
     old_mpos_[k] = mpos[k];
   }
+  published_ = true;
   // encoder counts as the Python adapter computes them (the linear encoder on index 4)
   for (int k = 0; k < 8; k++)
   {
@@ -428,7 +443,8 @@ void Adapter::publishRavenState()
       continue;
     msg.encVals[k] = static_cast<int>(k == 4 ? jpos[k] * LINEAR_JOINT_ENC_PER_M : jpos[k] * (ROTARY_JOINT_ENC_PER_REV / PI));
   }
-  msg.grasp_d[0] = jpos_d[6] + jpos_d[7];
+  // grasp angle (grasper 1 + grasper 2) in radians
+  msg.grasp_d[0] = setpoint_[5] + setpoint_[6];
   raven_state_pub_.publish(msg);
 }
 }  // namespace raven2_ambf_crtk

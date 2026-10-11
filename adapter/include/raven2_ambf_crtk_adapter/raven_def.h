@@ -31,6 +31,11 @@ const double IKIN_PARAM[6] = {std::sin(-75 * PI / 180), std::cos(-75 * PI / 180)
 // IK singularity tolerance, as in the C++ RAVEN IK (r2_kinematics.cpp)
 const double EPS = 1.0e-5;
 
+// raven_state status values of the real RAVEN (raven2 include/raven/defines.h)
+const int RL_E_STOP = 0, RL_INIT = 1, RL_PEDAL_UP = 2, RL_PEDAL_DN = 3;  // runlevels
+const int SL_PD_CTRL = 0, SL_AUTO_INIT = 3;                              // sublevels
+const int GOLD_ARM_SERIAL = 49;                                          // raven_state type of the left arm
+
 // motor transmissions and encoders (the GREEN_ARM values the simulated gold arm uses)
 const double LINEAR_JOINT_ENC_PER_M = 200000;
 const double ROTARY_JOINT_ENC_PER_REV = 2048 * 4;

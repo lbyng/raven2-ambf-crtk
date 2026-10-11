@@ -14,6 +14,8 @@ Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK A
 | `/arm1/servo_cr` | `geometry_msgs/TransformStamped` (relative pose) | subscribed |
 | `/ambf/raven_state` | `raven_2/raven_state` | published |
 
+At startup the adapter moves the arm to its home pose (2 s). During homing `raven_state` reports runlevel 1 (INIT) and servo commands are ignored, as on the real RAVEN; afterwards it reports runlevel 3 (pedal down).
+
 ## Native setup (Ubuntu 20.04 + ROS Noetic)
 
 **1. AMBF 2.0** — build dependencies are listed in the `apt-get install` step of the [Dockerfile](./Dockerfile).

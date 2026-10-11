@@ -1,4 +1,5 @@
 import rospy
+import sys
 import time
 
 import crtk_api 
@@ -13,7 +14,15 @@ from utils import ambf_raven_def as ard
 class main:
     def __init__(self):
         rospy.init_node("AMBF_raven2_controller", anonymous=True)
-        
+
+        # The AMBF client only discovers objects when it connects, so wait for the arm first.
+        deadline = time.time() + 30
+        while not any(topic.endswith('/base_link_L/State') for topic, _ in rospy.get_published_topics()):
+            if time.time() > deadline or rospy.is_shutdown():
+                sys.exit("AMBF RAVEN-II not found (no base_link_L topic). Is ambf_simulator running with raven_straight.yaml?")
+            rospy.logwarn_throttle(5, "Waiting for AMBF RAVEN-II to load...")
+            time.sleep(0.5)
+
         self.ambf_client = Client()
         self.ambf_client.connect()
         time.sleep(1)
@@ -25,8 +34,7 @@ class main:
             rospy.logwarn("Waiting for AMBF object: base_link_L")
             time.sleep(0.1)
         if self.arm is None:
-            rospy.logerr("AMBF object not found: base_link_L")
-            return None
+            sys.exit("AMBF object not found: base_link_L")
 
         self.robot_state = robot_state.robot_state()
         self.crtk_api = crtk_api.crtk_api(self.robot_state)

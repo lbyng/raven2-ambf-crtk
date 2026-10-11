@@ -8,6 +8,7 @@ import ambf_raven_state
 import raven_toolkits
 
 from ambf_client import Client
+from utils import ambf_raven_def as ard
 
 class main:
     def __init__(self):
@@ -59,6 +60,7 @@ class main:
     
     def home(self):
         self.raven_toolkits.set_home()
+        self.robot_state.joint_targets[:] = ard.HOME_JOINTS
         print("Set Home")
         return None
         

@@ -11,6 +11,10 @@ import raven_toolkits
 from ambf_client import Client
 from utils import ambf_raven_def as ard
 
+# Rate of this loop and of the commands the AMBF client sends to the simulator. The motion logic uses the
+# real elapsed time, so this only sets how often the setpoint and the measured/raven_state topics update.
+LOOP_RATE = 500
+
 class main:
     def __init__(self):
         rospy.init_node("AMBF_raven2_controller", anonymous=True)
@@ -24,7 +28,7 @@ class main:
             time.sleep(0.5)
 
         self.ambf_client = Client()
-        self.ambf_client.connect()
+        self.ambf_client.connect(default_publish_rate=LOOP_RATE)
         time.sleep(1)
         self.arm = None
         for _ in range(50):
@@ -35,6 +39,22 @@ class main:
             time.sleep(0.1)
         if self.arm is None:
             sys.exit("AMBF object not found: base_link_L")
+
+        # The client subscribes to every AMBF object (about 20 more State topics and Command publishers).
+        # Only the arm is used, and the extra rospy threads starve this loop of the GIL. The AMBF 2.0
+        # client has no public way to drop objects, hence the private _objects_dict; the objects stay in
+        # it (its publisher thread iterates it, and only publishes active objects anyway).
+        for obj in list(self.ambf_client._objects_dict.values()):
+            if obj is not self.arm:
+                for attr in ("_sub", "_pub", "_reset_pub", "_reset_bodies_pub"):
+                    if getattr(obj, attr, None) is not None:
+                        getattr(obj, attr).unregister()
+
+        # Re-subscribe to the arm state with TCP_NODELAY; the client subscribes without it, so the
+        # ~1 kHz state messages get batched by Nagle's algorithm.
+        sub = self.arm._sub
+        self.arm._sub = rospy.Subscriber(sub.resolved_name, sub.data_class, self.arm.ros_cb, queue_size=1, tcp_nodelay=True)
+        sub.unregister()
 
         self.robot_state = robot_state.robot_state()
         self.crtk_api = crtk_api.crtk_api(self.robot_state)
@@ -50,7 +70,7 @@ class main:
         
         
     def run(self):
-        rate = rospy.Rate(1000)
+        rate = rospy.Rate(LOOP_RATE)
         while not rospy.is_shutdown():
             
             self.robot_state.update_from_ambf(self.arm)

@@ -1,4 +1,5 @@
 import rospy
+import time
 import numpy as np
 import math as m
 import tf.transformations as tft
@@ -13,6 +14,7 @@ class ambf_raven_state:
         self.add_pos = np.zeros((3))
         self.add_ori = np.zeros((4))
         self.old_mpos = np.zeros((8))
+        self.last_mpos_time = None
         self.tm = None
         
         # Encoder Definition
@@ -123,7 +125,11 @@ class ambf_raven_state:
         return None
     
     def __motor_velocity(self):
-        self.mvel = (self.mpos - self.old_mpos) / 0.001
+        # use the real time between publishes; the loop does not run at exactly 1 kHz
+        now = time.monotonic()
+        dt = 0.001 if self.last_mpos_time is None else max(now - self.last_mpos_time, 1e-6)
+        self.last_mpos_time = now
+        self.mvel = (self.mpos - self.old_mpos) / dt
         return None
     
     def __joint_pose(self):

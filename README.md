@@ -1,6 +1,6 @@
 # RAVEN-II AMBF CRTK Framework
 
-Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK API**, with **1000 Hz** control and a real-RAVEN-style `raven_state` topic.
+Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK API**, with a real-RAVEN-style `raven_state` topic. The adapter loop and its topics run at **500 Hz**; AMBF runs the joint controllers at 1 kHz.
 
 > ⚠ Only the **left arm** (GOLD arm) is supported.
 

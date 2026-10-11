@@ -15,8 +15,8 @@ class crtk_api:
     def __init_pub_sub(self):
         self.__publisher_measured_js = rospy.Publisher('/arm1/measured_js', sensor_msgs.msg.JointState, latch = True, queue_size = 1)
         self.__publisher_measured_cp = rospy.Publisher('/arm1/measured_cp', geometry_msgs.msg.TransformStamped, latch = True, queue_size = 1)
-        self.__subscriber_servo_jr = rospy.Subscriber('/arm1/servo_jr', sensor_msgs.msg.JointState, self.__callback_servo_jr)
-        self.__subscriber_servo_cr = rospy.Subscriber('/arm1/servo_cr', geometry_msgs.msg.TransformStamped, self.__callback_servo_cr)
+        self.__subscriber_servo_jr = rospy.Subscriber('/arm1/servo_jr', sensor_msgs.msg.JointState, self.__callback_servo_jr, tcp_nodelay=True)
+        self.__subscriber_servo_cr = rospy.Subscriber('/arm1/servo_cr', geometry_msgs.msg.TransformStamped, self.__callback_servo_cr, tcp_nodelay=True)
         return None
          
     def pub_measured_js(self):

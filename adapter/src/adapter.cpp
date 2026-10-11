@@ -2,6 +2,8 @@
 //
 // Talks to the AMBF arm directly (base_link_L State / Command) and serves the CRTK topics:
 // /arm1/measured_js, /arm1/measured_cp, /arm1/servo_jr, /arm1/servo_cr and /ambf/raven_state.
+// Joint topics use the AMBF joint values; poses are in the real RAVEN's frame 0 ("frame0_L") and raven_state
+// uses the real RAVEN's joint values.
 // Servo commands move a joint goal; every cycle the setpoint sent to AMBF steps toward it at
 // 2.5 rad/s (0.5 m/s for the insertion) over the real elapsed time.
 #include <chrono>
@@ -22,6 +24,8 @@
 namespace raven2_ambf_crtk
 {
 using namespace raven_def;
+
+const char *const FRAME_ID = "frame0_L";  // the real RAVEN's frame 0 of the left arm
 
 class Adapter
 {
@@ -321,8 +325,8 @@ void Adapter::servoCr(const double pos[3], const double ori[4])
     return;
   }
 
-  // The setpoint follows at the joint speed limits: near the wrist singularity (HOME has wrist = 0)
-  // a 1 cm move can need ~0.7 rad of tool roll.
+  // The setpoint follows at the joint speed limits: near the wrist singularity (wrist at +-90 deg, where the
+  // grasper axis lines up with the shaft) a small move can need a large tool roll.
   goal_ = joints;
 }
 
@@ -366,7 +370,7 @@ void Adapter::publishMeasured()
 
   geometry_msgs::TransformStamped cp;
   cp.header.stamp = now;
-  cp.header.frame_id = "base_link";
+  cp.header.frame_id = FRAME_ID;
   cp.child_frame_id = "end_effector";
   cp.transform.translation.x = cartesian_pose_(0, 3);
   cp.transform.translation.y = cartesian_pose_(1, 3);
@@ -382,14 +386,15 @@ void Adapter::publishMeasured()
 
 void Adapter::publishRavenState()
 {
-  // raven_state layout: 0-2 shoulder/elbow/insertion, 3 unused, 4-7 tool roll/wrist/graspers;
-  // angles in degrees and velocities in degrees/s (the insertion too, as the real RAVEN does)
+  // raven_state layout: 0-2 shoulder/elbow/insertion, 3 unused, 4-7 tool roll/wrist/graspers; the real RAVEN's
+  // joint values, angles in degrees and velocities in degrees/s (the insertion too, as the real RAVEN does)
+  const Joints offset = {0, 0, REAL_INSERTION_OFFSET, REAL_TOOL_ROLL_OFFSET, 0, 0, 0};
   double jpos[8] = {0}, jpos_d[8] = {0}, jvel[8] = {0}, mpos[8] = {0}, mpos_d[8] = {0};
   for (int i = 0; i < 7; i++)
   {
     const int k = i < 3 ? i : i + 1;
-    jpos[k] = joint_positions_[i] * 180.0 / PI;
-    jpos_d[k] = setpoint_[i] * 180.0 / PI;
+    jpos[k] = (joint_positions_[i] + offset[i]) * 180.0 / PI;
+    jpos_d[k] = (setpoint_[i] + offset[i]) * 180.0 / PI;
     jvel[k] = joint_velocities_[i] * 180.0 / PI;
   }
   for (int k = 0; k < 8; k++)
@@ -406,7 +411,7 @@ void Adapter::publishRavenState()
   raven_2::raven_state msg;
   msg.hdr.seq = raven_state_seq_++;
   msg.hdr.stamp = ros::Time::now();
-  msg.hdr.frame_id = "base_link";
+  msg.hdr.frame_id = FRAME_ID;
   msg.runlevel = runlevel_;
   msg.sublevel = sublevel_;
   msg.last_seq = last_seq_;

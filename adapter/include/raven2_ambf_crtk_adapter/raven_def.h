@@ -12,16 +12,28 @@ namespace raven_def
 {
 const double PI = M_PI;
 
-// shoulder, elbow, insertion (m), tool roll, wrist, grasper 1, grasper 2
-const Joints HOME = {PI / 6, PI / 2, -0.07, -PI / 4, 0, PI / 4, PI / 4};
+// Joint values are the AMBF model's: shoulder, elbow, insertion (m), tool roll, wrist, grasper 1, grasper 2.
+// They equal the real RAVEN's jpos except for the insertion and the tool roll, which are offset like the
+// real RAVEN's joint_states (URDF): real Z_INS = insertion + 0.47 m, real tool roll = tool roll + 45 deg.
+const double REAL_INSERTION_OFFSET = 0.47;
+const double REAL_TOOL_ROLL_OFFSET = PI / 4;
+
+const Joints HOME = {PI / 6, PI / 2, -0.07, -PI / 4, 0, PI / 4, PI / 4};  // the real RAVEN's home pose
 const Joints JOINT_LIMIT_LOW = {0.0, PI / 4, -0.17, -PI * 2, -2, -2, -2};
 const Joints JOINT_LIMIT_HIGH = {PI / 2, (PI * 3) / 4, 0.1, PI * 2, 2, 2, 2};
 
-// DH parameters; theta (and d for the prismatic joint 3) are the joint variables
+// DH parameters; theta (and d for the prismatic joint 3) are the joint variables. The tool joints map to
+// DH angles as in the real RAVEN (r2_kinematics.cpp joint2theta): theta4 = real tool roll,
+// theta5 = wrist - 90 deg, theta6 = (grasper 2 - grasper 1) / 2.
 const double DH_ALPHA[7] = {0, -75 * PI / 180, 128 * PI / 180, 0, PI / 2, PI / 2, 0};
 const double DH_A[7] = {0, 0, 0, 0, 0, 0.013, 0};
 const double DH_D[7] = {0, 0, 0, -0.0, 0, 0, 0};
 const double DH_THETA_INSERTION = PI / 2;
+const double DH_WRIST_OFFSET = -PI / 2;
+// The chain above starts with Rz(shoulder) Rx(-75 deg) Rz(elbow); the real RAVEN's left arm starts with
+// Rz(shoulder + 205 deg) Rx(75 deg) Rz(elbow + 180 deg), which is the same chain turned by 25 deg about the
+// shoulder axis. Poses are given in the real RAVEN's frame 0 (origin at the RCM, z along the shoulder axis).
+const double DH_BASE_ROTATION = 25 * PI / 180;
 
 // IK constants: sin/cos of alpha_2 (-75 deg) and of the right arm's alpha_3 (52 deg), d4, a5
 const double IKIN_PARAM[6] = {std::sin(-75 * PI / 180), std::cos(-75 * PI / 180),

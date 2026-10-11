@@ -11,8 +11,13 @@ Runs the **RAVEN-II** surgical robot in the **AMBF** simulator behind a **CRTK A
 | `/arm1/measured_js` | `sensor_msgs/JointState` | published |
 | `/arm1/measured_cp` | `geometry_msgs/TransformStamped` | published |
 | `/arm1/servo_jr` | `sensor_msgs/JointState` (joint deltas in `position`) | subscribed |
-| `/arm1/servo_cr` | `geometry_msgs/TransformStamped` (relative pose) | subscribed |
+| `/arm1/servo_cr` | `geometry_msgs/TransformStamped` (relative pose, in the tool frame) | subscribed |
 | `/ambf/raven_state` | `raven_2/raven_state` | published |
+
+The kinematics and frames are those of the real RAVEN-II (`r2_kinematics.cpp`):
+- Poses (`measured_cp`, `raven_state` `pos`/`ori`) are in `frame0_L`, the left arm's frame 0: origin at the remote center of motion, z along the shoulder axis.
+- The tool frame has its origin on the grasper axis, x along the jaws and z along the grasper axis.
+- `measured_js` and `servo_jr` use the AMBF joint values. `raven_state` uses the real RAVEN's: insertion + 0.47 m, tool roll + 45°.
 
 At startup the adapter moves the arm to its home pose (2 s). During homing `raven_state` reports runlevel 1 (INIT) and servo commands are ignored, as on the real RAVEN; afterwards it reports runlevel 3 (pedal down).
 

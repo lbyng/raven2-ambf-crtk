@@ -1,4 +1,5 @@
-// RAVEN-II left arm kinematics, ported step by step from raven_fk.py / raven_ik.py.
+// RAVEN-II left arm kinematics: the FK/IK of the Python adapter (raven_fk.py / raven_ik.py), with the joint
+// conventions and the base frame of the real RAVEN (raven2 r2_kinematics.cpp).
 #include "raven2_ambf_crtk_adapter/kinematics.h"
 
 #include <limits>
@@ -9,8 +10,11 @@ using namespace raven_def;
 
 namespace
 {
-const Eigen::Matrix4d T_B0 =
-    (Eigen::Matrix4d() << 0, 0, 1, 0.30071, 0, -1, 0, 0.061, 1, 0, 0, -0.007, 0, 0, 0, 1).finished();
+// the real RAVEN's frame 0 <- frame 0 of the DH chain here
+const Eigen::Matrix4d T_BASE = (Eigen::Matrix4d() << std::cos(DH_BASE_ROTATION), -std::sin(DH_BASE_ROTATION), 0, 0,
+                                std::sin(DH_BASE_ROTATION), std::cos(DH_BASE_ROTATION), 0, 0,
+                                0, 0, 1, 0,
+                                0, 0, 0, 1).finished();
 
 Eigen::Matrix4d link(double alpha, double theta, double a, double d)
 {
@@ -31,42 +35,29 @@ Eigen::Matrix4d fwdTrans(int a, int b, const double *alpha, const double *theta,
   return xf;
 }
 
-// joints -> DH values: the grasper difference for index 5, angles wrapped, insertion as is
-void jointToDH(const Joints &joint, double dh[7])
+// joints -> DH values (theta 1, 2, d 3, theta 4, 5, 6): angles wrapped, insertion as is, the jaws' midline
+// for theta 6
+void jointToDH(const Joints &joint, double dh[6])
 {
-  for (int i = 0; i < 7; i++)
-  {
-    if (i == 2)
-      dh[i] = joint[i];
-    else if (i == 5)
-      dh[i] = joint[5] - joint[6];
-    else
-      dh[i] = wrapToPi(joint[i]);
-  }
+  dh[0] = wrapToPi(joint[0]);
+  dh[1] = wrapToPi(joint[1]);
+  dh[2] = joint[2];
+  dh[3] = wrapToPi(joint[3] + REAL_TOOL_ROLL_OFFSET);
+  dh[4] = wrapToPi(joint[4] + DH_WRIST_OFFSET);
+  dh[5] = (joint[6] - joint[5]) / 2;
 }
 
-// DH values -> joints, splitting the grasper difference around the grasp angle
-Joints dhToJoint(const double dh[7], double grasp)
+// DH values -> joints, opening the jaws symmetrically about the midline by the grasp angle
+Joints dhToJoint(const double dh[6], double grasp)
 {
   Joints joint{};
-  for (int i = 0; i < 6; i++)
-  {
-    if (i == 2)
-    {
-      joint[i] = dh[i];
-      continue;
-    }
-    if (i == 5)
-    {
-      joint[6] = (-dh[5] + grasp) / 2;
-      joint[5] = (dh[5] + grasp) / 2;
-    }
-    else
-    {
-      joint[i] = dh[i];
-    }
-    joint[i] = wrapToPi(joint[i]);
-  }
+  joint[0] = wrapToPi(dh[0]);
+  joint[1] = wrapToPi(dh[1]);
+  joint[2] = dh[2];
+  joint[3] = wrapToPi(dh[3] - REAL_TOOL_ROLL_OFFSET);
+  joint[4] = wrapToPi(dh[4] - DH_WRIST_OFFSET);
+  joint[5] = -dh[5] + grasp / 2;
+  joint[6] = dh[5] + grasp / 2;
   return joint;
 }
 }  // namespace
@@ -84,16 +75,16 @@ double wrapToPi(double angle)
 
 Eigen::Matrix4d forwardKinematics(const Joints &joints)
 {
-  double dh[7], alpha[7], theta[7], a[7], d[7];
+  double dh[6], alpha[6], theta[6], a[6], d[6];
   jointToDH(joints, dh);
-  for (int i = 0; i < 7; i++)
+  for (int i = 0; i < 6; i++)
   {
     theta[i] = (i == 2) ? DH_THETA_INSERTION : dh[i];
     d[i] = (i == 2) ? dh[i] : DH_D[i];
     alpha[i] = DH_ALPHA[i];
     a[i] = DH_A[i];
   }
-  return T_B0 * fwdTrans(0, 6, alpha, theta, a, d);
+  return T_BASE * fwdTrans(0, 6, alpha, theta, a, d);
 }
 
 bool applyJointLimits(Joints &joints)
@@ -119,9 +110,9 @@ IkResult inverseKinematics(const Eigen::Matrix4d &pose, double grasp, const Join
                            bool &limited)
 {
   const double *P = IKIN_PARAM;
-  const Eigen::Matrix4d T06 = T_B0.inverse() * pose;
+  const Eigen::Matrix4d T06 = T_BASE.inverse() * pose;
 
-  double iksol[8][7] = {};
+  double iksol[8][6] = {};
   bool ikcheck[8];
   for (bool &c : ikcheck)
     c = true;
@@ -242,7 +233,7 @@ IkResult inverseKinematics(const Eigen::Matrix4d &pose, double grasp, const Join
   }
 
   // the valid solution closest to the current joints, compared in DH space
-  double curr[7];
+  double curr[6];
   jointToDH(current, curr);
   double best_err = 1e10;
   int best = -1;

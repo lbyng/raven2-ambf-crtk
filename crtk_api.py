@@ -50,27 +50,26 @@ class crtk_api:
         self.__publisher_measured_cp.publish(msg)
         return None
     
+    # The callbacks run in the rospy thread: they only queue the command, and the control loop
+    # applies it, so no command is dropped or half-written.
     def __callback_servo_jr(self, msg):
         if msg is not None:
-            if not self.robot_state.is_busy:
-                self.robot_state.control_mode = "JOINT"
-                self.robot_state.motion_state = "MOVING"
-                self.robot_state.joint_delta[:] = msg.position[0:7]
+            if len(msg.position) < 7:
+                rospy.logwarn("servo_jr needs 7 joint deltas, got {}. Command ignored.".format(len(msg.position)))
+                return None
+            self.robot_state.commands.append(("JOINT", np.array(msg.position[0:7], dtype='float')))
         return None
-    
-    
+
+
     def __callback_servo_cr(self, msg):
         if msg is not None:
-            if not self.robot_state.is_busy:
-                self.robot_state.control_mode = "CARTESIAN"
-                self.robot_state.motion_state = "MOVING"
-                
-                self.robot_state.delta_pos[:] = [msg.transform.translation.x, 
-                                                 msg.transform.translation.y, 
-                                                 msg.transform.translation.z]
-                    
-                self.robot_state.delta_ori[:] = [msg.transform.rotation.x,
-                                                 msg.transform.rotation.y,
-                                                 msg.transform.rotation.z,
-                                                 msg.transform.rotation.w]
+            delta_pos = [msg.transform.translation.x,
+                         msg.transform.translation.y,
+                         msg.transform.translation.z]
+
+            delta_ori = [msg.transform.rotation.x,
+                         msg.transform.rotation.y,
+                         msg.transform.rotation.z,
+                         msg.transform.rotation.w]
+            self.robot_state.commands.append(("CARTESIAN", delta_pos, delta_ori))
         return None

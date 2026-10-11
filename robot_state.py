@@ -1,4 +1,5 @@
 import ambf_msgs.msg
+import collections
 import rospy
 import numpy as np
 
@@ -20,9 +21,10 @@ class robot_state:
         self.delta_ori = np.zeros((4))
         
         self.control_mode = "JOINT"
-        self.motion_state = "IDLE"
-        self.is_busy = False
-        
+
+        # servo commands queued by the ROS callback thread, applied one per control cycle
+        self.commands = collections.deque(maxlen = 1000)
+
         return None
 
     def update_from_ambf(self, arm):

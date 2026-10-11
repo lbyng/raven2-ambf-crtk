@@ -9,9 +9,10 @@ import utils.utilities as u
 # T_CB --> here the B frame is with respect to C, in sim, universal frame called C in between two arms, the B frames
 # T_B0 --> where the base of the robot is with respect to the B frame (middle of the robot arms)
 
-# this method returns iksols <-- a matrix of all valid solutions, more work is needed to find the best solution
+# this method returns (joints, limited) for the valid solution closest to curr_jp (HOME_JOINTS if not given),
+# or None when there is no valid solution (RCM singularity or unreachable pose)
 
-def inv_kinematics(arm, input_cp, input_gangle, raven_def):
+def inv_kinematics(arm, input_cp, input_gangle, raven_def, curr_jp=None):
 
     # contextualizing the location of the tip of raven with respect to the outer plane of existence
 
@@ -72,10 +73,9 @@ def inv_kinematics(arm, input_cp, input_gangle, raven_def):
 
         # checking the physical boundary of how much it can insert
         if insertion <= raven_def.RAVEN_IKIN_PARAM[5]:
+            # like the C++ RAVEN IK (r2_kinematics.cpp), the whole IK fails here
             print("WARNING: Raven mechanism at RCM singularity. IK failing.")
-            ikcheck[4 * i + 0] = ikcheck[4 * i + 1] = False
-            ikcheck[4 * i + 3] = ikcheck[4 * i + 4] = False
-            break
+            return None
 
         # sets prismatic joint as higher or lower depending on how high or low the 5th frame is relative to the 0th frame
         iksol[4 * i + 0][2] = iksol[4 * i + 1][2] = - raven_def.RAVEN_IKIN_PARAM[4] - insertion
@@ -162,13 +162,16 @@ def inv_kinematics(arm, input_cp, input_gangle, raven_def):
             T_0_5 = np.matmul(T_0_3, fwd_trans(3, 5, dh_alpha, dh_theta, dh_a, dh_d))
             T_5_6 = np.matmul(np.linalg.inv(T_0_5), T_0_6)
             c6 = u.get_Basis(T_5_6)[0,0]
-            s6 = u.get_Origin(T_5_6)[2,0]
+            s6 = u.get_Basis(T_5_6)[2,0]
         iksol[i][5] = m.atan2(s6, c6)
 
-    if not joint_to_dhvalue(raven_def.HOME_JOINTS, 1, raven_def):
-        print("Something went wrong :(")
-        return False
-    best_err, best_idx = find_best_solution(raven_def.HOME_JOINTS, iksol, ikcheck, raven_def)
+    # pick the solution closest to the current joints, compared in DH space (as the C++ RAVEN IK does)
+    if curr_jp is None:
+        curr_jp = raven_def.HOME_JOINTS
+    curr_dh = joint_to_dhvalue(np.asarray(curr_jp, dtype = 'float'), arm, raven_def)[1]
+    best_err, best_idx = find_best_solution(curr_dh, iksol, ikcheck, raven_def)
+    if best_idx < 0:
+        return None
     return dhvalue_to_joint(iksol[best_idx], input_gangle, arm, raven_def)
 
 def dhvalue_to_joint(dhvalue, gangle, arm, raven_def):

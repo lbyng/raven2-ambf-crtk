@@ -2,7 +2,7 @@
 <package format="2">
   <name>raven2_ambf_crtk_adapter</name>
   <version>0.1.0</version>
-  <description>CRTK API adapter for the AMBF RAVEN-II simulation (C++, runs at 1 kHz)</description>
+  <description>CRTK API adapter for the AMBF RAVEN-II simulation, following the real RAVEN's crtk interface (C++, runs at 1 kHz)</description>
   <maintainer email="199535548+lbyng@users.noreply.github.com">lbyng</maintainer>
   <license>LGPL-3</license>
 
@@ -13,4 +13,5 @@
   <depend>geometry_msgs</depend>
   <depend>ambf_msgs</depend>
   <depend>raven_2</depend>
+  <depend>crtk_msgs</depend>
 </package>

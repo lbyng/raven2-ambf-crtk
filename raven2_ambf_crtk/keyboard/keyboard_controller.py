@@ -5,13 +5,14 @@ import numpy as np
 from . import utils_keyboard_controller as utils
 import tf.transformations as tft
 
-velocity_joint_1 = 3 # degree/s
-velocity_joint_2 = 3 # degree/s
-velocity_joint_3 = 0.01 # m/s
-velocity_joint_4 = 10 # degree/s
-velocity_joint_5 = 10 # degree/s
-velocity_joint_6 = 10 # degree/s
-velocity_joint_7 = 10 # degree/s
+# joint step per key press
+velocity_joint_1 = 3 # degree
+velocity_joint_2 = 3 # degree
+velocity_joint_3 = 0.01 # m
+velocity_joint_4 = 10 # degree
+velocity_joint_5 = 10 # degree
+velocity_joint_6 = 10 # degree
+velocity_joint_7 = 10 # degree
 
 
 def main():
@@ -21,6 +22,9 @@ def main():
     rospy.init_node('raven_keyboard_controller', anonymous=True)
 
     controller = ambf_raven_controller.ambf_raven_controller()
+    if not controller.enable():
+        state = controller.state.state if controller.state else 'no /arm1/operating_state'
+        print(f'The arm could not be enabled ({state}). Is the adapter running?')
 
     utils.print_menu()
 
@@ -167,14 +171,14 @@ def main():
             utils.print_no_newline(' Moving: Grasper up    ')
             pos = np.zeros((3))
             rot = np.zeros((4))
-            pos[2] = -0.01
+            pos[2] = 0.01
             controller.pub_servo_cr_command(pos, rot)
 
         elif input_key == 'v':
             utils.print_no_newline(' Moving: Grasper down    ')
             pos = np.zeros((3))
             rot = np.zeros((4))
-            pos[2] = 0.01
+            pos[2] = -0.01
             controller.pub_servo_cr_command(pos, rot)
 
         elif input_key == 'h':

@@ -6,7 +6,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs geometry_msgs ambf_msgs raven_2)
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs geometry_msgs ambf_msgs raven_2 crtk_msgs)
 find_package(Eigen3 REQUIRED)
 
 catkin_package(INCLUDE_DIRS include LIBRARIES ${PROJECT_NAME}_kinematics)

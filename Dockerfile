@@ -56,6 +56,9 @@ RUN /bin/bash -c "source /opt/ros/noetic/setup.bash \
     && cmake .. \
     && make -j\"$(nproc)\""
 
+# crtk_msgs 1.0.0: the message version of the real RAVEN's CRTK interface (operating_state)
+RUN git clone -b 1.0.0 --depth 1 https://github.com/collaborative-robotics/crtk_msgs.git /ws/catkin_ws/src/crtk_msgs
+
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && cd /ws/catkin_ws && catkin_make"
 
 # Copied after the AMBF/catkin builds so code changes reuse their cached layers. The adapter is the

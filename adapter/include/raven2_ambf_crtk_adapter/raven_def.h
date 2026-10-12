@@ -17,10 +17,17 @@ const double PI = M_PI;
 // real RAVEN's joint_states (URDF): real Z_INS = insertion + 0.47 m, real tool roll = tool roll + 45 deg.
 const double REAL_INSERTION_OFFSET = 0.47;
 const double REAL_TOOL_ROLL_OFFSET = PI / 4;
+const Joints REAL_OFFSET = {0, 0, REAL_INSERTION_OFFSET, REAL_TOOL_ROLL_OFFSET, 0, 0, 0};  // real = AMBF + offset
 
 const Joints HOME = {PI / 6, PI / 2, -0.07, -PI / 4, 0, PI / 4, PI / 4};  // the real RAVEN's home pose
-const Joints JOINT_LIMIT_LOW = {0.0, PI / 4, -0.17, -PI * 2, -2, -2, -2};
-const Joints JOINT_LIMIT_HIGH = {PI / 2, (PI * 3) / 4, 0.1, PI * 2, 2, 2, 2};
+
+// Software joint limits of the real RAVEN with the RAVEN grasper tool (raven2 crtk branch: defines.h, tools.cpp):
+// shoulder 0..90 deg, elbow 45..135 deg, Z_INS 0.23..0.56 m (the AMBF model stops at 0.30 m), tool roll
+// -182..182 deg, wrist -70..70 deg, graspers -105..105 deg; here in AMBF joint values.
+const Joints JOINT_LIMIT_LOW = {0.0, PI / 4, -0.17, -182 * PI / 180 - REAL_TOOL_ROLL_OFFSET,
+                                -70 * PI / 180, -105 * PI / 180, -105 * PI / 180};
+const Joints JOINT_LIMIT_HIGH = {PI / 2, 3 * PI / 4, 0.56 - REAL_INSERTION_OFFSET, 182 * PI / 180 - REAL_TOOL_ROLL_OFFSET,
+                                 70 * PI / 180, 105 * PI / 180, 105 * PI / 180};
 
 // DH parameters; theta (and d for the prismatic joint 3) are the joint variables. The tool joints map to
 // DH angles as in the real RAVEN (r2_kinematics.cpp joint2theta): theta4 = real tool roll,
@@ -43,10 +50,24 @@ const double IKIN_PARAM[6] = {std::sin(-75 * PI / 180), std::cos(-75 * PI / 180)
 // IK singularity tolerance, as in the C++ RAVEN IK (r2_kinematics.cpp)
 const double EPS = 1.0e-5;
 
-// raven_state status values of the real RAVEN (raven2 include/raven/defines.h)
-const int RL_E_STOP = 0, RL_INIT = 1, RL_PEDAL_UP = 2, RL_PEDAL_DN = 3;  // runlevels
-const int SL_PD_CTRL = 0, SL_AUTO_INIT = 3;                              // sublevels
-const int GOLD_ARM_SERIAL = 49;                                          // raven_state type of the left arm
+// Runlevels of the real RAVEN (raven2 include/raven/defines.h)
+const int RL_E_STOP = 0, RL_INIT = 1, RL_PEDAL_UP = 2, RL_PEDAL_DN = 3;
+const int GOLD_ARM = 0;  // raven_state type of the left arm (crtk branch numbering)
+
+// CRTK interface of the real RAVEN (raven2 crtk branch: crtk_motion_api.cpp, update_device_state.cpp, rt_raven.cpp)
+// CRTK base frame <- frame 0 for the gold arm (T_crtk_in_r0_gold): same origin (the RCM), rotated
+const double CRTK_BASE_ROTATION[3][3] = {{0, -1, 0}, {0, 0, -1}, {1, 0, 0}};
+// joint servo commands (servo_jr / jp / jv): largest change of the joint setpoint per 1 ms cycle
+const double SERVO_RAD_PER_MS = 0.0025, SERVO_M_PER_MS = 0.00005;
+// Cartesian servo commands: largest translation per cycle (servo_cr / cv); servo_cp target checks
+const double SERVO_CR_M_PER_MS = 0.1;
+const double SERVO_CP_STEP = 0.015, SERVO_CP_MAX_STEP = 0.075;  // clipped to 15 mm from the tool, refused beyond 75 mm
+const double SERVO_CP_MAX_JUMP = 0.5, SERVO_CP_MAX_ROTATION = 0.5;  // m and rad from the measured pose
+const double WORKSPACE_LOW[3] = {-0.03, -0.10, -0.20}, WORKSPACE_HIGH[3] = {0.13, 0.15, -0.015};  // servo_cp, CRTK base
+// cycles without joint commands before Cartesian control (IK) takes over again
+const int JOINT_CONTROL_COUNTDOWN = 10;
+// the arm reports busy until this many cycles after the last servo command
+const int BUSY_CYCLES = 1000;
 
 // motor transmissions and encoders (the GREEN_ARM values the simulated gold arm uses)
 const double LINEAR_JOINT_ENC_PER_M = 200000;
